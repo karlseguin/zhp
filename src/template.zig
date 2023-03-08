@@ -179,8 +179,7 @@ pub fn Template(comptime Context: type, comptime template: []const u8) type {
 
         // Render the whole template ignoring any yield statements
         pub fn render(context: Context, stream: anytype) @TypeOf(stream).Error!void {
-            inline for (sections) |s, i| {
-                _ = i;
+            inline for (sections) |s| {
                 try s.render(context, stream);
             }
         }

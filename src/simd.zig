@@ -26,8 +26,8 @@ pub fn eql(comptime T: type, a: []const T, b: []const T) bool {
     if (a.ptr == b.ptr) return true;
     if (a.len < n) {
         // Too small to fit, fallback to standard eql
-        for (a) |item, index| {
-            if (b[index] != item) return false;
+        for (a, b) |item_a, item_b| {
+            if (item_a != item_b) return false;
         }
     } else {
         var end: usize = n;
@@ -108,7 +108,7 @@ pub fn indexOfPos(comptime T: type, buf: []const u8, start_index: usize, delimit
         const mask = @bitCast(V1x32, first == first_chunk) & @bitCast(V1x32, last == last_chunk);
         if (@reduce(.Or, mask) != 0) {
             // TODO: Use __builtin_clz???
-            for (@as([n]bool, @bitCast(Vbx32, mask))) |match, i| {
+            for (@as([n]bool, @bitCast(Vbx32, mask)), 0..) |match, i| {
                 if (match and eql(T, buf[start + i .. start + i + k], delimiter)) {
                     return start + i;
                 }

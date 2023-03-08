@@ -118,7 +118,7 @@ pub const Websocket = struct {
 
     // Close and send the status
     pub fn close(self: Websocket, code: u16) !void {
-        const c = if (native_endian == .Big) code else @byteSwap(u16, code);
+        const c = if (native_endian == .Big) code else @byteSwap(code);
         const data = @bitCast([2]u8, c);
         _ = try self.writeMessage(.Close, &data);
     }
@@ -182,7 +182,7 @@ pub const Websocket = struct {
             try stream.writeAll(mask);
 
             // Encode
-            for (dataframe.data) |c, i| {
+            for (dataframe.data, 0..) |c, i| {
                 try stream.writeByte(c ^ mask[i % 4]);
             }
         } else {
@@ -271,7 +271,7 @@ pub const Websocket = struct {
         const data = buf[start..end];
         if (header.mask) {
             // Decode data in place
-            for (data) |c, i| {
+            for (data, 0..) |c, i| {
                 data[i] = c ^ mask[i % 4];
             }
         }

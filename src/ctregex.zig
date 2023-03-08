@@ -649,7 +649,7 @@ const RegexParser = struct {
         fn ctStr(comptime self: Brackets) []const u8 {
             var str: []const u8 = "[";
             if (self.is_exclusive) str = str ++ "<not> ";
-            for (self.rules) |rule, idx| {
+            for (self.rules, 0..) |rule, idx| {
                 if (idx > 0) str = str ++ " ";
                 str = str ++ switch (rule) {
                     .char => |c| ctUtf8EncodeChar(c),
@@ -684,7 +684,7 @@ pub const Encoding = enum {
     utf16le,
     codepoint,
 
-    pub fn CharT(self: Encoding) type {
+    pub fn CharT(comptime self: Encoding) type {
         return switch (self) {
             .ascii, .utf8 => u8,
             .utf16le => u16,
@@ -902,7 +902,7 @@ pub fn MatchResult(comptime regex: []const u8, comptime options: MatchOptions) t
     if (RegexParser.parse(regex)) |parsed| {
         const capture_len = parsed.captures.len;
         var capture_names: [capture_len]?[]const u8 = undefined;
-        for (parsed.captures) |capt, idx| {
+        for (parsed.captures, 0..) |capt, idx| {
             if (capt.capture_info) |info| {
                 capture_names[idx] = info.name;
             }
@@ -921,7 +921,7 @@ pub fn MatchResult(comptime regex: []const u8, comptime options: MatchOptions) t
             pub usingnamespace if (capture_len != 0)
                 struct {
                     pub fn capture(self: Self, comptime name: []const u8) ?[]const CharT {
-                        inline for (Self.capture_names) |maybe_name, curr_idx| {
+                        inline for (Self.capture_names, 0..) |maybe_name, curr_idx| {
                             if (maybe_name) |curr_name| {
                                 if (comptime std.mem.eql(u8, name, curr_name))
                                     return self.captures[curr_idx];

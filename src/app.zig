@@ -67,8 +67,8 @@ pub fn createHandler(comptime T: type) Handler {
                             const name = comptime [_]u8{std.ascii.toLower(f.name[0])} ++ f.name[1..];
                             if (@hasDecl(T, name)) {
                                 if (request.method == @intToEnum(Request.Method, f.value)) {
-                                    const handler = @field(self, name);
-                                    return try handler(request, response);
+                                    const handler = @field(T, name);
+                                    return try handler(self, request, response);
                                 }
                             }
                         }
@@ -165,12 +165,12 @@ pub const ServerRequest = struct {
 // if the client requests keep-alive and the server allows
 // the connection is reused to process futher requests.
 pub const ServerConnection = struct {
-    const Frame = @Frame(startRequestLoop);
+    const Frame = if (std.io.is_async) @Frame(startRequestLoop) else null;
     const RequestList = std.ArrayList(*ServerRequest);
     application: *Application,
     io: IOStream = undefined,
     address: net.Address = undefined,
-    frame: *Frame,
+    frame: if (std.io.is_async) *Frame else void,
     // Outstanding requests
     //requests: RequestList,
 
@@ -178,7 +178,7 @@ pub const ServerConnection = struct {
         return ServerConnection{
             .application = app,
             .io = try IOStream.initCapacity(allocator, null, 0, mem.page_size),
-            .frame = try allocator.create(Frame),
+            .frame = if (comptime std.io.is_async) try allocator.create(Frame) else {},
         };
     }
 
@@ -404,8 +404,10 @@ pub const ServerConnection = struct {
     }
 
     pub fn deinit(self: *ServerConnection) void {
-        const allocator = self.application.allocator;
-        allocator.destroy(self.frame);
+        if (comptime std.io.is_async) {
+            const allocator = self.application.allocator;
+            allocator.destroy(self.frame);
+        }
         self.io.deinit();
     }
 };
@@ -448,16 +450,16 @@ pub const Clock = struct {
     value: []const u8 = "",
 
     pub fn get(self: *Clock) []const u8 {
-        const lock = self.lock.acquire();
-        defer lock.release();
+        self.lock.lock();
+        defer self.lock.unlock();
         return self.value;
     }
 
     pub fn update(self: *Clock) void {
         const t = time.milliTimestamp();
         if (t - self.last_updated > 1000) {
-            var lock = self.lock.acquire();
-            defer lock.release();
+            self.lock.lock();
+            defer self.lock.unlock();
             self.value = Datetime.formatHttpFromTimestamp(&self.buffer, t) catch unreachable;
             self.last_updated = t;
         }
@@ -620,14 +622,6 @@ pub const Application = struct {
         try mimetypes.instance.?.load();
         self.clock.update();
 
-        // Ignore sigpipe
-        var act = os.Sigaction{
-            .handler = .{ .sigaction = os.SIG.IGN },
-            .mask = os.empty_sigset,
-            .flags = 0,
-        };
-        try os.sigaction(os.SIG.PIPE, &act, null);
-
         Application.instance = self;
         self.running = true;
 
@@ -638,12 +632,19 @@ pub const Application = struct {
             }
         }
 
-        var background = async self.backgroundLoop();
+        if (comptime std.io.is_async) {
+            _ = async self.backgroundLoop();
+        } else {
+           const t = try std.Thread.spawn(.{}, backgroundLoop, .{self});
+           t.detach();
+        }
 
-        // Make sure the background task stops if an error occurs
         defer {
             self.running = false;
-            await background;
+
+            // not sure how to conditionally await the async background or the
+            // thread...
+            time.sleep(2 * time.ns_per_s);
         }
 
         while (self.running) {
@@ -692,13 +693,12 @@ pub const Application = struct {
         // Inline the routing to avoid using function pointers and async call
         // which seems to have a pretty significant effect on speed
         @setEvalBranchQuota(50000);
-        const path = server_request.request.path;
-        inline for (routes) |*route| {
-            if (try regex.match(route.pattern, .{ .encoding = .ascii }, path)) |*match| {
+        const request = &server_request.request;
+        const path = request.path;
+        inline for (routes) |route| {
+            if (try regex.match(route.pattern, .{ .encoding = .ascii }, path)) |match| {
                 //std.log.warn("Route: name={s} path={s}\n", .{route.name, request.path});
-                if (match.captures.len > 0) {
-                    server_request.request.args = match.captures[0..];
-                }
+                request.args = if (match.captures.len > 0) match.captures[0..] else null;
                 try route.handler(self, server_request);
                 return;
             }

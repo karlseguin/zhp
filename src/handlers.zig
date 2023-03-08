@@ -49,7 +49,7 @@ pub const ServerErrorHandler = struct {
                 if (part.is("stacktrace")) {
                     // Dump stack trace
                     if (self.server_request.err) |err| {
-                        try response.stream.print("error: {s}\n", .{err});
+                        try response.stream.print("error: {}\n", .{err});
                     }
                     if (@errorReturnTrace()) |trace| {
                         try std.debug.writeStackTrace(trace.*, &response.stream, response.allocator, try std.debug.getSelfDebugInfo(), .no_color);
@@ -60,12 +60,13 @@ pub const ServerErrorHandler = struct {
             }
         } else {
             if (@errorReturnTrace()) |trace| {
-                const stderr = std.io.getStdErr().writer();
+                const stderr = std.io.getStdErr();
+                const writer = stderr.writer();
                 const held = std.debug.getStderrMutex();
                 held.lock();
                 defer held.unlock();
 
-                try std.debug.writeStackTrace(trace.*, &stderr, response.allocator, try std.debug.getSelfDebugInfo(), std.debug.detectTTYConfig());
+                try std.debug.writeStackTrace(trace.*, &writer, response.allocator, try std.debug.getSelfDebugInfo(), std.debug.detectTTYConfig(stderr));
             }
 
             try response.stream.writeAll("<h1>Server Error</h1>");

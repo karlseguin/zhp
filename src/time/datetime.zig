@@ -191,13 +191,13 @@ test "iso-first-monday" {
         1816, 1823, 1839, 1849, 1849, 1870, 1879, 1882, 1909, 1910,
         1917, 1934, 1948, 1965, 1989, 2008, 2064, 2072, 2091, 2096
     };
-    const output = [20]u32{
+    const outputs = [20]u32{
         662915, 665470, 671315, 674969, 674969, 682641, 685924, 687023,
         696886, 697250, 699805, 706014, 711124, 717340, 726104, 733041,
         753495, 756421, 763358, 765185
     };
-    for (years) |year, i| {
-        try testing.expectEqual(daysBeforeFirstMonday(year), output[i]);
+    for (years, outputs) |year, output| {
+        try testing.expectEqual(daysBeforeFirstMonday(year), output);
     }
 }
 
@@ -796,11 +796,11 @@ test "date-isocalendar" {
         ISOCalendar{.year=2024, .week=3, .weekday=2},
     };
 
-    for (dates) |d, i| {
+    for (dates, expect) |d, e| {
         const date = try Date.parseIso(d);
         const cal = date.isoCalendar();
-        try testing.expectEqual(cal, expect[i]);
-        try testing.expectEqual(date.weekOfYear(), expect[i].week);
+        try testing.expectEqual(cal, e);
+        try testing.expectEqual(date.weekOfYear(), e.week);
     }
 }
 
@@ -1022,7 +1022,7 @@ test "time-copy" {
 test "time-compare" {
     var t1 = try Time.create(8, 30, 0, 0);
     var t2 = try Time.create(9, 30, 0, 0);
-    var t3 = try Time.create(8, 00, 0, 0);
+    var t3 = try Time.create(8, 0, 0, 0);
     var t4 = try Time.create(9, 30, 17, 0);
 
     try testing.expect(t1.lt(t2));
@@ -1356,7 +1356,8 @@ pub const Datetime = struct {
     // Formats a timestamp in the format used by HTTP.
     // eg "Tue, 15 Nov 1994 08:12:31 GMT"
     pub fn formatHttpFromTimestamp(buf: []u8, timestamp: i64) ![]const u8 {
-        return Datetime.fromTimestamp(timestamp).formatHttpBuf(buf);
+        var dt = Datetime.fromTimestamp(timestamp);
+        return dt.formatHttpBuf(buf);
     }
 
     // From time in nanoseconds

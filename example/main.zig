@@ -62,7 +62,7 @@ const StreamHandler = struct {
     pub fn stream(self: *StreamHandler, io: *web.IOStream) !usize {
         std.log.info("Starting audio stream", .{});
         const n = self.forward(io) catch |err| {
-            std.log.info("Error streaming: {s}", .{err});
+            std.log.info("Error streaming: {}", .{err});
             return 0;
         };
         return n;
@@ -286,7 +286,6 @@ const ChatWebsocketHandler = struct {
     }
 
     pub fn onMessage(self: *ChatWebsocketHandler, message: []const u8, binary: bool) !void {
-        _ = self;
         _ = binary;
         std.log.debug("Websocket message: {s}", .{message});
         const allocator = self.websocket.response.allocator;
@@ -349,12 +348,12 @@ const ChatWebsocketHandler = struct {
 
     pub fn disconnected(self: *ChatWebsocketHandler) !void {
         if (self.websocket.err) |err| {
-            std.log.debug("Websocket error: {s}", .{err});
+            std.log.debug("Websocket error: {}", .{err});
         } else {
             std.log.debug("Websocket closed!", .{});
         }
 
-        for (chat_handlers.items) |handler, i| {
+        for (chat_handlers.items, 0..) |handler, i| {
             if (handler == self) {
                 _ = chat_handlers.swapRemove(i);
                 break;

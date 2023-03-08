@@ -36,25 +36,27 @@ const V1p0 = @bitCast(u32, [4]u8{'/', '1', '.', '0'});
 const V2p0 = @bitCast(u32, [4]u8{'/', '2', '.', '0'});
 const V3p0 = @bitCast(u32, [4]u8{'/', '3', '.', '0'});
 
-
 fn skipGraphFindSpaceOrQuestionMark(ch: u8) !bool {
-    if (!ascii.isGraph(ch)) {
+    if (!isGraph(ch)) {
         return if (ch == ' ') true else error.BadRequest;
     }
     return ch == '?';
 }
 
 fn skipGraphFindSpace(ch: u8) !bool {
-    if (!ascii.isGraph(ch)) {
+    if (!isGraph(ch)) {
         return if (ch == ' ') true else error.BadRequest;
     }
     return if (ch == '?') error.BadRequest else false;
 }
 
-fn skipHostChar(ch: u8) bool {
-    return !ascii.isAlNum(ch) and !(ch == '.' or ch == '-');
+fn isGraph(ch: u8)bool {
+    return ascii.isPrint(ch) and ch != ' ';
 }
 
+fn skipHostChar(ch: u8) bool {
+    return !ascii.isAlphanumeric(ch) and !(ch == '.' or ch == '-');
+}
 
 pub const Request = struct {
     pub const Content = struct {
@@ -139,7 +141,7 @@ pub const Request = struct {
     read_finished: bool = false,
 
     // Url captures
-    args: ?[]?[]const u8 = null,
+    args: ?[]const ?[]const u8 = null,
 
     // All headers
     headers: Headers,
@@ -540,10 +542,10 @@ pub const Request = struct {
         _ = fmt;
         _ = options;
         try std.fmt.format(out_stream, "Request{{\n", .{});
-        try std.fmt.format(out_stream, "  .client=\"{s}\",\n", .{self.client});
-        try std.fmt.format(out_stream, "  .method={s},\n", .{self.method});
-        try std.fmt.format(out_stream, "  .version={s},\n", .{self.version});
-        try std.fmt.format(out_stream, "  .scheme={s},\n", .{self.scheme});
+        try std.fmt.format(out_stream, "  .client=\"{}\",\n", .{self.client});
+        try std.fmt.format(out_stream, "  .method={},\n", .{self.method});
+        try std.fmt.format(out_stream, "  .version={},\n", .{self.version});
+        try std.fmt.format(out_stream, "  .scheme={},\n", .{self.scheme});
         try std.fmt.format(out_stream, "  .host=\"{s}\",\n", .{self.host});
         try std.fmt.format(out_stream, "  .path=\"{s}\",\n", .{self.path});
         try std.fmt.format(out_stream, "  .query=\"{s}\",\n", .{self.query});
@@ -658,7 +660,8 @@ const TEST_POST_1 =
 
 fn expectParseResult(buf: []const u8,  request: Request) !void {
     var buffer: [1024*1024]u8 = undefined;
-    const allocator = std.heap.FixedBufferAllocator.init(&buffer).allocator();
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    const allocator = fba.allocator();
     var stream = try IOStream.initTest(allocator, buf);
     var r = try Request.initTest(allocator, &stream);
     try r.parseTest(&stream);
@@ -676,7 +679,8 @@ fn expectParseResult(buf: []const u8,  request: Request) !void {
 
 fn expectParseError(err: anyerror, buf: []const u8) !void {
     var buffer: [1024*1024]u8 = undefined;
-    const allocator = std.heap.FixedBufferAllocator.init(&buffer).allocator();
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    const allocator = fba.allocator();
     var stream = IOStream.initTest(allocator, buf) catch unreachable;
     var request = Request.initTest(allocator, &stream) catch unreachable;
     try testing.expectError(err, request.parseTest(&stream));

@@ -263,7 +263,7 @@ pub const IOStream = struct {
             try self.fillBuffer();
         }
         const d = @bitCast(I, self.readBuffered()[0..n].*);
-        const r = if (endian != native_endian) @byteSwap(I, d) else d;
+        const r = if (endian != native_endian) @byteSwap(d) else d;
         self.skipBytes(n);
         return @bitCast(T, r);
     }

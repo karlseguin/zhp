@@ -45,7 +45,7 @@ pub const Cookies = struct {
     }
 
     pub fn lookup(self: Cookies, key: []const u8) !usize {
-        for (self.cookies.items) |cookie, i| {
+        for (self.cookies.items, 0..) |cookie, i| {
             if (std.mem.eql(u8, cookie.key, key)) return i;
         }
         return error.KeyError;

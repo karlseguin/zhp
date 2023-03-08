@@ -64,7 +64,7 @@ pub const Headers = struct {
 
     // Get the index of the  key
     pub fn lookup(self: *Headers, key: []const u8) !usize {
-        for (self.headers.items) |header, i| {
+        for (self.headers.items, 0..) |header, i| {
             if (ascii.eqlIgnoreCase(header.key, key)) return i;
         }
         return error.KeyError;
@@ -230,7 +230,7 @@ pub const Headers = struct {
     }
 
     pub fn parseBuffer(self: *Headers, data: []const u8, max_size: usize) !void {
-        const hack = @bitCast([]u8, data); // HACK: Explicitly violate const
+        const hack = @constCast(data); // HACK: Explicitly violate const
         var fba = std.heap.FixedBufferAllocator.init(hack);
         fba.end_index = data.len; // Ensure we don't modify the buffer
 

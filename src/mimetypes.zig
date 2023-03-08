@@ -286,7 +286,8 @@ pub const Registry = struct {
 
     // Read a single mime.types-format file.
     pub fn loadRegistryFile(self: *Registry, file: fs.File) !void {
-        var stream = &std.io.bufferedReader(file.reader()).reader();
+        var bf = std.io.bufferedReader(file.reader());
+        var stream = &bf.reader();
         var buf: [1024]u8 = undefined;
         while (true) {
             const result = try stream.readUntilDelimiterOrEof(&buf, '\n');
