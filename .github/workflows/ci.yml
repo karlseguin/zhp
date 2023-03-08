@@ -11,8 +11,8 @@ jobs:
             sudo docker pull williamyeh/wrk
             zig version
       - name: Module test
-        run: zig test -OReleaseSafe src/app.zig
+        run: zig build test
       - name: Parser test
-        run: zig run --pkg-begin zhp src/zhp.zig --pkg-end -OReleaseSafe tests/parser.zig
+        run: zig build parser_test
       - name: Build
-        run: zig build -Drelease-safe=true install
+        run: zig build -Doptimize=ReleaseSafe

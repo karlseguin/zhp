@@ -39,8 +39,9 @@ pub fn main() !void {
 pub fn parseRequests(socket: net.Stream) !usize {
     var stream = try web.IOStream.initCapacity(allocator, socket, 0, 4096);
     defer stream.deinit();
-    var request = try web.Request.initCapacity(allocator, 1024 * 10, 32, 32);
+    var request = try web.Request.initCapacity(allocator, 8192, 32, 32);
     defer request.deinit();
+
     var cnt: usize = 0;
     var end: usize = 0;
     while (true) {
