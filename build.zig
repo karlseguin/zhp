@@ -4,7 +4,7 @@ pub fn build(b: *Builder) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const zhp_module = b.addModule("zph", .{
+    const zhp_module = b.addModule("zhp", .{
         .source_file = .{ .path = "src/zhp.zig" },
     });
 
